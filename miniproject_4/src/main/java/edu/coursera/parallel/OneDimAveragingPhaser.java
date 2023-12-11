@@ -71,7 +71,7 @@ public final class OneDimAveragingPhaser {
                 for (int iter = 0; iter < iterations; iter++) {
                     for (int j = left; j <= right; j++) {
                         threadPrivateMyNew[j] = (threadPrivateMyVal[j - 1]
-                            + threadPrivateMyVal[j + 1]) / 2.0;
+                                + threadPrivateMyVal[j + 1]) / 2.0;
                     }
                     ph.arriveAndAwaitAdvance();
 
@@ -110,10 +110,8 @@ public final class OneDimAveragingPhaser {
     public static void runParallelFuzzyBarrier(final int iterations,
             final double[] myNew, final double[] myVal, final int n,
             final int tasks) {
-        Phaser[] phs = new Phaser[tasks];
-        for (int i = 0; i < tasks; i++) {
-            phs[i] = new Phaser(1);
-        }
+        Phaser phaser = new Phaser(0);
+        phaser.bulkRegister(tasks);
 
         Thread[] threads = new Thread[tasks];
 
@@ -136,15 +134,14 @@ public final class OneDimAveragingPhaser {
                     threadPrivateMyNew[right] = (threadPrivateMyVal[right - 1]
                             + threadPrivateMyVal[right + 1]) / 2.0;
 
-                    phs[i].arrive();
+                    int phase = phaser.arrive();
 
                     for (int j = left + 1; j <= right - 1; j++) {
                         threadPrivateMyNew[j] = (threadPrivateMyVal[j - 1]
                                 + threadPrivateMyVal[j + 1]) / 2.0;
                     }
 
-                    if (i > 0) phs[i - 1].awaitAdvance(iter);
-                    if (i < tasks - 1) phs[i + 1].awaitAdvance(iter);
+                    phaser.awaitAdvance(phase);
 
                     double[] temp = threadPrivateMyNew;
                     threadPrivateMyNew = threadPrivateMyVal;
